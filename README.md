@@ -53,15 +53,12 @@ python3 -m venv .venv
 source .venv/bin/activate
 
 pip install -r requirements.txt
-
-cp .env.example .env
-# edit .env if your model folder is named differently
 ```
 
 ## Running the API
 
 ```bash
-uvicorn main:app --reload
+uvicorn app:app --reload
 ```
 
 Then open **http://localhost:8000/docs** for interactive Swagger UI, or hit the endpoints directly:
