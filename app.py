@@ -8,6 +8,7 @@ from pypdf import PdfReader
 import torch
 import io
 import os
+import re
 from contextlib import asynccontextmanager
 
 load_dotenv()
@@ -55,6 +56,13 @@ class SummarizeResponse(BaseModel):
     latency_ms: float
     device: str
 
+def clean_summary(text: str) -> str:
+    """Fix common BART detokenization artifacts (space before punctuation, merged words)."""
+    text = re.sub(r"\s+([.,!?])", r"\1", text)  # "complete ." -> "complete."
+    text = re.sub(r"\n+", " ", text)             # collapse stray newlines from generation
+    text = re.sub(r"\s{2,}", " ", text)          # collapse double spaces
+    return text.strip()
+
 def summarization(input_text: str) -> tuple[str, float]:
     if model is None or tokenizer is None:
         raise HTTPException(status_code=503, detail="Model is not loaded yet. Please try again later.")
@@ -76,7 +84,8 @@ def summarization(input_text: str) -> tuple[str, float]:
             early_stopping=True,
         )
 
-    summary = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
+    raw_summary = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
+    summary = clean_summary(raw_summary)
     latency_ms = (time.time() - start_time) * 1000
     return summary, latency_ms
 
