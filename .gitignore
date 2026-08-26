@@ -1,0 +1,34 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+*.egg
+
+# --- Virtual environments ---
+.venv/
+venv/
+env/
+
+# --- Environment / secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Model weights (too large for git, download/train separately) ---
+bart-base-*-final/
+*.safetensors
+*.bin
+bart-summarizer-checkpoints/
+*.zip
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- OS / editor ---
+.DS_Store
+.vscode/
+*.swp
+
+# --- Logs ---
+*.log
