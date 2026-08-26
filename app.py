@@ -80,6 +80,15 @@ def summarization(input_text: str) -> tuple[str, float]:
     latency_ms = (time.time() - start_time) * 1000
     return summary, latency_ms
 
+def extract_text_from_pdf_bytes(file_bytes: bytes) -> str:
+    reader = PdfReader(io.BytesIO(file_bytes))
+    text = ""
+    for page in reader.pages:
+        page_text = page.extract_text()
+        if page_text:
+            text += page_text + "\n"
+    return text.strip()
+
 # ---------------------------------------------------------
 # Routes
 # ---------------------------------------------------------
@@ -88,8 +97,14 @@ def root():
     return {"status": "ok", "model_loaded": model is not None, "device": device}
 
 
-@app.post("/summarize/text", tags=["Text Summarization"])
+@app.post("/summarize/text", tags=["Summarization"])
 def summarize_text(request: SummarizeTextRequest):
+    """
+    Summarize raw text input.
+ 
+    Note: input is truncated to the first 512 tokens (~350-400 words);
+    longer documents will only be summarized based on their opening section.
+    """
     if not request.text.strip():
         raise HTTPException(status_code=400, detail="Input text cannot be empty.")
 
@@ -98,6 +113,35 @@ def summarize_text(request: SummarizeTextRequest):
     return SummarizeResponse(
         summary=summary,
         input_word_count=len(request.text.split()),
+        latency_ms=round(latency, 1),
+        device=device,
+    )
+
+@app.post("/summarize/pdf", response_model=SummarizeResponse, tags=["Summarization"])
+async def summarize_pdf(file: UploadFile = File(...)):
+    """
+    Upload a PDF and get back a summary of its extracted text.
+ 
+    Note: input is truncated to the first 512 tokens (~350-400 words);
+    longer documents will only be summarized based on their opening section.
+    """
+    if file.content_type != "application/pdf":
+        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
+ 
+    file_bytes = await file.read()
+    extracted_text = extract_text_from_pdf_bytes(file_bytes)
+ 
+    if not extracted_text:
+        raise HTTPException(
+            status_code=422,
+            detail="Could not extract text from this PDF. It may be a scanned image without OCR.",
+        )
+ 
+    summary, latency = summarization(extracted_text)
+ 
+    return SummarizeResponse(
+        summary=summary,
+        input_word_count=len(extracted_text.split()),
         latency_ms=round(latency, 1),
         device=device,
     )

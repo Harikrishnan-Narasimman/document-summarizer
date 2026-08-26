@@ -5,3 +5,4 @@ torch
 pypdf
 pydantic
 python-dotenv
+python-multipart
